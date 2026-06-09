@@ -68,6 +68,11 @@ export default async function DashboardPage() {
   const totalAppartements = ((appartements as Appartement[]) || []).length;
   const totalTransactionsJour =
     ((transactionsJour as Transaction[]) || []).length;
+    const { data: activites } = await supabase
+  .from("historique")
+  .select("*")
+  .order("created_at", { ascending: false })
+  .limit(5);
 
   return (
     <main className="p-8">
@@ -140,34 +145,40 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="mt-8 rounded-xl bg-slate-800 p-6 border border-slate-700">
-        <h2 className="text-2xl font-bold mb-4">
-          Séparation des ressources
-        </h2>
+     <div className="mt-8 rounded-xl bg-slate-800 p-6 border border-slate-700">
+  <h2 className="text-2xl font-bold mb-4">
+    📜 Dernières activités
+  </h2>
 
-        <div className="grid md:grid-cols-3 gap-4 text-sm text-slate-300">
-          <div className="rounded-lg bg-slate-900 p-4">
-            <p className="font-semibold text-white">💰 Argent propre</p>
-            <p className="mt-2">
-              Argent directement disponible sur les comptes bancaires.
-            </p>
+  {activites && activites.length > 0 ? (
+    <div className="space-y-3">
+      {activites.map((item: any) => (
+        <div
+          key={item.id}
+          className="rounded-lg bg-slate-900 p-4"
+        >
+          <div className="flex justify-between">
+            <span className="font-semibold">
+              {item.type}
+            </span>
+
+            <span className="text-sm text-slate-400">
+              {new Date(item.created_at).toLocaleString("fr-FR")}
+            </span>
           </div>
 
-          <div className="rounded-lg bg-slate-900 p-4">
-            <p className="font-semibold text-white">💵 Argent sale</p>
-            <p className="mt-2">
-              Argent stocké séparément, non mélangé avec l'argent propre.
-            </p>
-          </div>
-
-          <div className="rounded-lg bg-slate-900 p-4">
-            <p className="font-semibold text-white">📦 Marchandises</p>
-            <p className="mt-2">
-              Valeur estimée selon les prix unitaires renseignés.
-            </p>
-          </div>
+          <p className="mt-2 text-slate-300 line-clamp-2">
+            {item.description}
+          </p>
         </div>
-      </div>
+      ))}
+    </div>
+  ) : (
+    <p className="text-slate-400">
+      Aucune activité récente.
+    </p>
+  )}
+</div>
     </main>
   );
 }

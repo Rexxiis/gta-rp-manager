@@ -110,10 +110,29 @@ export default function TransactionsClient({
       return;
     }
 
-    alert("Transaction enregistrée !");
-    setLignes([]);
-    setNote("");
-  }
+    await supabase.from("historique").insert({
+  type: "Transaction",
+  utilisateur: "Nico",
+  description:
+    `Groupe : ${groupe.nom}\n\n` +
+    lignes
+      .map(
+        (ligne) =>
+          `${ligne.produit.nom} x${ligne.quantite} = ${(
+            ligne.produit.prix * ligne.quantite
+          ).toLocaleString()} $`
+      )
+      .join("\n") +
+    `\n\nArgent propre : ${totalPropre.toLocaleString()} $` +
+    `\nArgent sale : ${totalSale.toLocaleString()} $` +
+    `\nTotal : ${totalGeneral.toLocaleString()} $` +
+    (note ? `\n\nNote : ${note}` : ""),
+});
+
+alert("Transaction enregistrée !");
+setLignes([]);
+setNote("");
+}
 
   return (
     <main className="p-8">

@@ -1,85 +1,89 @@
 import { supabase } from "../../lib/supabase";
 
+type Historique = {
+  id: number;
+  type: string;
+  description: string;
+  utilisateur: string | null;
+  created_at: string;
+};
+
+function getIcon(type: string) {
+  switch (type.toLowerCase()) {
+    case "blanchiment":
+      return "🧼";
+    case "stockage":
+      return "📦";
+    case "transaction":
+      return "💰";
+    case "membre":
+      return "👥";
+    case "banque":
+      return "🏦";
+    default:
+      return "📜";
+  }
+}
+
 export default async function HistoriquePage() {
-  const { data: transactions, error } = await supabase
-    .from("transactions")
+  const { data, error } = await supabase
+    .from("historique")
     .select("*")
     .order("created_at", { ascending: false });
 
   if (error) {
     return (
-      <main className="p-8">
-        <p className="text-red-500">
-          {error.message}
-        </p>
+      <main className="p-8 text-red-400">
+        Erreur : {error.message}
       </main>
     );
   }
 
+  const historiques = (data || []) as Historique[];
+
   return (
     <main className="p-8">
-      <h1 className="text-4xl font-bold mb-8">
-        📜 Historique
-      </h1>
+      <h1 className="text-4xl font-bold mb-2">📜 Historique</h1>
+      <p className="text-slate-400 mb-8">
+        Journal centralisé des actions importantes
+      </p>
 
-      <div className="bg-slate-800 rounded-xl overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-slate-700">
-            <tr>
-              <th className="text-left p-4">
-                Date
-              </th>
+      {historiques.length === 0 ? (
+        <div className="rounded-xl bg-slate-800 p-6 text-slate-400">
+          Aucun événement enregistré.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {historiques.map((item) => (
+            <div
+              key={item.id}
+              className="rounded-xl bg-slate-800 p-6 border border-slate-700"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-bold">
+                    {getIcon(item.type)} {item.type}
+                  </h2>
 
-              <th className="text-left p-4">
-                Argent propre
-              </th>
+                  <p className="mt-2 whitespace-pre-line text-slate-300">
+                    {item.description}
+                  </p>
 
-              <th className="text-left p-4">
-                Argent sale
-              </th>
+                  {item.utilisateur && (
+                    <p className="mt-3 text-sm text-slate-500">
+                      Utilisateur : {item.utilisateur}
+                    </p>
+                  )}
+                </div>
 
-              <th className="text-left p-4">
-                Total
-              </th>
-
-              <th className="text-left p-4">
-                Note
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {transactions.map((transaction) => (
-              <tr
-                key={transaction.id}
-                className="border-t border-slate-700"
-              >
-                <td className="p-4">
-                  {new Date(
-                    transaction.created_at
-                  ).toLocaleString("fr-FR")}
-                </td>
-
-                <td className="p-4">
-                  {transaction.total_propre.toLocaleString()} $
-                </td>
-
-                <td className="p-4">
-                  {transaction.total_sale.toLocaleString()} $
-                </td>
-
-                <td className="p-4 font-bold">
-                  {transaction.total_general.toLocaleString()} $
-                </td>
-
-                <td className="p-4">
-                  {transaction.note || "-"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                <p className="whitespace-nowrap text-sm text-slate-500">
+                  {new Date(item.created_at).toLocaleString("fr-FR")}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </main>
   );
 }

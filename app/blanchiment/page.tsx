@@ -1,9 +1,11 @@
-export default function BlanchimentPage() {
-  return (
-    <main className="min-h-screen bg-slate-900 text-white p-8">
-      <h1 className="text-4xl font-bold">
-        Tableau de bord
-      </h1>
-    </main>
-  );
+import BlanchimentClient from "./BlanchimentClient";
+import { supabase } from "../../lib/supabase";
+
+export default async function BlanchimentPage() {
+  const { data } = await supabase
+    .from("blanchiments")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  return <BlanchimentClient historiques={data || []} />;
 }
