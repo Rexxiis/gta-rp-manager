@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import LogoutButton from "./LogoutButton";
+import UserInfo from "./UserInfo";
 
 const menuItems = [
   { name: "📊 Dashboard", href: "/dashboard" },
@@ -62,8 +63,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <aside className="flex w-72 flex-col bg-slate-900 border-r border-slate-800 p-6">
-        <h1 className="text-2xl font-bold mb-8">GTA RP Manager</h1>
+        <h1 className="text-2xl font-bold mb-4">
+  GTA RP Manager
+</h1>
 
+<UserInfo />
         <nav className="flex flex-col gap-2">
           {menuItems.map((item) => (
             <Link
