@@ -1,0 +1,32 @@
+export const membres = [
+  {
+    id: 1,
+    nom: "Nico",
+    grade: "Boss",
+    present: true,
+    telephone: "555-1001",
+    compte: "100001",
+    banque: 2500000,
+    appartement: "A101",
+  },
+  {
+    id: 2,
+    nom: "Marco",
+    grade: "Bras droit",
+    present: true,
+    telephone: "555-1002",
+    compte: "100002",
+    banque: 1800000,
+    appartement: "A102",
+  },
+  {
+    id: 3,
+    nom: "Luca",
+    grade: "Membre",
+    present: false,
+    telephone: "555-1003",
+    compte: "100003",
+    banque: 950000,
+    appartement: "B201",
+  },
+];
