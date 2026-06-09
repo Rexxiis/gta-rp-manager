@@ -12,6 +12,7 @@ type Membre = {
   compte: string | null;
   banque: number;
   appartement: string | null;
+  email: string | null;
 };
 
 type Appartement = {
@@ -27,6 +28,7 @@ const membreVide = {
   compte: "",
   banque: 0,
   appartement: "",
+  email: "",
 };
 
 export default function EffectifsClient({
@@ -47,9 +49,7 @@ export default function EffectifsClient({
   function getCodeAcces(appartementCode: string | null) {
     if (!appartementCode) return "-";
 
-    const appartement = appartements.find(
-      (a) => a.code === appartementCode
-    );
+    const appartement = appartements.find((a) => a.code === appartementCode);
 
     return appartement?.code_acces || "-";
   }
@@ -70,6 +70,7 @@ export default function EffectifsClient({
       compte: membre.compte || "",
       banque: membre.banque || 0,
       appartement: membre.appartement || "",
+      email: membre.email || "",
     });
     setModalOuverte(true);
   }
@@ -85,11 +86,7 @@ export default function EffectifsClient({
 
       if (error) return alert(error.message);
 
-      setListe(
-        liste.map((m) =>
-          m.id === edition.id ? { ...m, ...form } : m
-        )
-      );
+      setListe(liste.map((m) => (m.id === edition.id ? { ...m, ...form } : m)));
     } else {
       const { data, error } = await supabase
         .from("membres")
@@ -108,10 +105,7 @@ export default function EffectifsClient({
   async function supprimer(id: number) {
     if (!confirm("Supprimer ce membre ?")) return;
 
-    const { error } = await supabase
-      .from("membres")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("membres").delete().eq("id", id);
 
     if (error) return alert(error.message);
 
@@ -159,6 +153,7 @@ export default function EffectifsClient({
             <tr>
               <th className="p-4 text-left">Nom</th>
               <th className="p-4 text-left">Grade</th>
+              <th className="p-4 text-left">Email</th>
               <th className="p-4 text-left">Présence</th>
               <th className="p-4 text-left">Téléphone</th>
               <th className="p-4 text-left">Compte</th>
@@ -173,39 +168,43 @@ export default function EffectifsClient({
               <tr key={membre.id} className="border-t border-slate-700">
                 <td className="p-4 font-semibold">{membre.nom}</td>
                 <td className="p-4">{membre.grade}</td>
-              <td className="p-4">
-  <input
-    type="checkbox"
-    checked={membre.present}
-    onChange={async (e) => {
-      const nouvelleValeur = e.target.checked;
+                <td className="p-4">{membre.email || "-"}</td>
 
-      setListe((ancienne) =>
-        ancienne.map((m) =>
-          m.id === membre.id
-            ? { ...m, present: nouvelleValeur }
-            : m
-        )
-      );
+                <td className="p-4">
+                  <input
+                    type="checkbox"
+                    checked={membre.present}
+                    onChange={async (e) => {
+                      const nouvelleValeur = e.target.checked;
 
-      const { error } = await supabase
-        .from("membres")
-        .update({
-          present: nouvelleValeur,
-        })
-        .eq("id", membre.id);
+                      setListe((ancienne) =>
+                        ancienne.map((m) =>
+                          m.id === membre.id
+                            ? { ...m, present: nouvelleValeur }
+                            : m
+                        )
+                      );
 
-      if (error) {
-        alert(error.message);
-      }
-    }}
-    className="h-5 w-5 cursor-pointer"
-  />
-</td>
+                      const { error } = await supabase
+                        .from("membres")
+                        .update({
+                          present: nouvelleValeur,
+                        })
+                        .eq("id", membre.id);
+
+                      if (error) {
+                        alert(error.message);
+                      }
+                    }}
+                    className="h-5 w-5 cursor-pointer"
+                  />
+                </td>
+
                 <td className="p-4">{membre.telephone || "-"}</td>
                 <td className="p-4">{membre.compte || "-"}</td>
                 <td className="p-4">{membre.appartement || "-"}</td>
                 <td className="p-4">{getCodeAcces(membre.appartement)}</td>
+
                 <td className="p-4">
                   <div className="flex gap-2">
                     <button
@@ -241,17 +240,20 @@ export default function EffectifsClient({
                 className="rounded bg-slate-800 p-3"
                 placeholder="Nom"
                 value={form.nom}
-                onChange={(e) =>
-                  setForm({ ...form, nom: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, nom: e.target.value })}
+              />
+
+              <input
+                className="rounded bg-slate-800 p-3"
+                placeholder="Email de connexion"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
               />
 
               <select
                 className="rounded bg-slate-800 p-3"
                 value={form.grade}
-                onChange={(e) =>
-                  setForm({ ...form, grade: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, grade: e.target.value })}
               >
                 <option>Boss</option>
                 <option>Bras droit</option>
@@ -271,9 +273,7 @@ export default function EffectifsClient({
                 className="rounded bg-slate-800 p-3"
                 placeholder="Compte bancaire"
                 value={form.compte}
-                onChange={(e) =>
-                  setForm({ ...form, compte: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, compte: e.target.value })}
               />
 
               <select

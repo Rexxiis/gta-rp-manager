@@ -12,6 +12,30 @@ type Blanchiment = {
   created_at: string;
 };
 
+async function getNomUtilisateur() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return "Inconnu";
+
+  const { data: profil } = await supabase
+    .from("profils")
+    .select("membre_id")
+    .eq("id", user.id)
+    .single();
+
+  if (!profil?.membre_id) return "Inconnu";
+
+  const { data: membre } = await supabase
+    .from("membres")
+    .select("nom")
+    .eq("id", profil.membre_id)
+    .single();
+
+  return membre?.nom || "Inconnu";
+}
+
 export default function BlanchimentClient({
   historiques,
 }: {
@@ -30,6 +54,8 @@ export default function BlanchimentClient({
       return;
     }
 
+    const utilisateur = await getNomUtilisateur();
+
     const { data, error } = await supabase
       .from("blanchiments")
       .insert({
@@ -47,17 +73,17 @@ export default function BlanchimentClient({
     }
 
     setListe([data, ...liste]);
-    await supabase
-  .from("historique")
-  .insert({
-    type: "Blanchiment",
-    utilisateur: "Nico",
-    description:
-      `${montantSale.toLocaleString()} $ argent sale\n` +
-      `↓\n` +
-      `${montantPropre.toLocaleString()} $ argent propre\n` +
-      `Taux : ${taux}%`,
-  });
+
+    await supabase.from("historique").insert({
+      type: "Blanchiment",
+      utilisateur,
+      description:
+        `${montantSale.toLocaleString()} $ argent sale\n` +
+        `↓\n` +
+        `${montantPropre.toLocaleString()} $ argent propre\n` +
+        `Taux : ${taux}%`,
+    });
+
     setMontantSale(0);
     setTaux(75);
     setNote("");
@@ -129,17 +155,13 @@ export default function BlanchimentClient({
                   <p className="mt-2">
                     💵 Sale : {item.montant_sale.toLocaleString()} $
                   </p>
-                  <p>
-                    Taux : {item.taux} %
-                  </p>
+                  <p>Taux : {item.taux} %</p>
                   <p className="font-bold">
                     💰 Propre : {item.montant_propre.toLocaleString()} $
                   </p>
 
                   {item.note && (
-                    <p className="mt-2 text-slate-400">
-                      {item.note}
-                    </p>
+                    <p className="mt-2 text-slate-400">{item.note}</p>
                   )}
                 </div>
               ))}

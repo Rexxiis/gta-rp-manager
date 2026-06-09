@@ -49,12 +49,55 @@ export default function StockagesClient({
     0
   );
 
+  async function ajouterAppartement() {
+    const { data, error } = await supabase
+      .from("appartements")
+      .insert({
+        code: "Nouvel appartement",
+        type: "Stockage",
+        code_acces: "",
+        proprietaire: "",
+        argent_sale: 0,
+      })
+      .select(`
+        id,
+        code,
+        code_acces,
+        proprietaire,
+        type,
+        argent_sale,
+        stock_items (
+          id,
+          nom,
+          quantite,
+          prix_unitaire
+        )
+      `)
+      .single();
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setListe([
+      ...liste,
+      {
+        ...data,
+        stock_items: data.stock_items || [],
+      },
+    ]);
+  }
+
   async function sauvegarder() {
     if (!editing) return;
 
     const { error } = await supabase
       .from("appartements")
       .update({
+        code: editing.code,
+        type: editing.type,
+        proprietaire: editing.proprietaire,
         code_acces: editing.code_acces,
         argent_sale: editing.argent_sale,
       })
@@ -137,7 +180,16 @@ export default function StockagesClient({
 
   return (
     <main className="p-8">
-      <h1 className="text-4xl font-bold mb-8">📦 Stockages</h1>
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="text-4xl font-bold">📦 Stockages</h1>
+
+        <button
+          onClick={ajouterAppartement}
+          className="rounded bg-green-600 px-5 py-3 font-semibold hover:bg-green-500"
+        >
+          ➕ Ajouter un appartement
+        </button>
+      </div>
 
       <div className="grid md:grid-cols-3 gap-6 mb-8">
         <div className="rounded-xl bg-slate-800 p-6">
@@ -164,10 +216,14 @@ export default function StockagesClient({
         {liste.map((appartement) => (
           <div key={appartement.id} className="rounded-xl bg-slate-800 p-6">
             <div className="mb-4">
-<h2 className="text-2xl font-bold">🏠 {appartement.code}</h2>
-<p className="text-slate-400">🔑 {appartement.code_acces || "-"}</p>
-<p className="text-slate-400">👤 {appartement.proprietaire || "Aucun"}</p>
-<p className="text-slate-400">📦 {appartement.type}</p>
+              <h2 className="text-2xl font-bold">🏠 {appartement.code}</h2>
+              <p className="text-slate-400">
+                🔑 {appartement.code_acces || "-"}
+              </p>
+              <p className="text-slate-400">
+                👤 {appartement.proprietaire || "Aucun"}
+              </p>
+              <p className="text-slate-400">📦 {appartement.type}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -233,10 +289,49 @@ export default function StockagesClient({
             <div className="grid md:grid-cols-2 gap-4 mb-6">
               <input
                 className="rounded bg-slate-800 p-3"
+                placeholder="Nom appartement"
+                value={editing.code}
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    code: e.target.value,
+                  })
+                }
+              />
+
+              <input
+                className="rounded bg-slate-800 p-3"
+                placeholder="Type"
+                value={editing.type}
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    type: e.target.value,
+                  })
+                }
+              />
+
+              <input
+                className="rounded bg-slate-800 p-3"
+                placeholder="Propriétaire"
+                value={editing.proprietaire || ""}
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    proprietaire: e.target.value,
+                  })
+                }
+              />
+
+              <input
+                className="rounded bg-slate-800 p-3"
                 placeholder="Code accès"
                 value={editing.code_acces || ""}
                 onChange={(e) =>
-                  setEditing({ ...editing, code_acces: e.target.value })
+                  setEditing({
+                    ...editing,
+                    code_acces: e.target.value,
+                  })
                 }
               />
 

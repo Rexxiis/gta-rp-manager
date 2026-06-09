@@ -8,15 +8,18 @@ export default async function TransactionsPage() {
       id,
       nom,
       activite,
+      actif,
       produits (
         id,
         groupe_id,
         nom,
         type,
         prix,
-        monnaie
+        monnaie,
+        actif
       )
     `)
+    .eq("actif", true)
     .order("id", { ascending: true });
 
   if (error) {
@@ -27,5 +30,12 @@ export default async function TransactionsPage() {
     );
   }
 
-  return <TransactionsClient groupes={groupes || []} />;
+  const groupesFiltres = (groupes || []).map((groupe) => ({
+    ...groupe,
+    produits: (groupe.produits || []).filter(
+      (produit) => produit.actif !== false
+    ),
+  }));
+
+  return <TransactionsClient groupes={groupesFiltres} />;
 }

@@ -17,8 +17,20 @@ type StockItem = {
   prix_unitaire: number | null;
 };
 
-type Transaction = {
+type TransactionLibre = {
   id: number;
+  type: string;
+  description: string;
+  montant: number;
+  monnaie: "propre" | "sale";
+  created_at: string;
+};
+
+type Activite = {
+  id: number;
+  type: string;
+  description: string;
+  created_at: string;
 };
 
 export default async function DashboardPage() {
@@ -41,6 +53,28 @@ export default async function DashboardPage() {
     .from("transactions")
     .select("id")
     .gte("created_at", today.toISOString());
+
+  const { data: transactionsLibresJour } = await supabase
+    .from("transactions_libres")
+    .select("id, montant")
+    .gte("created_at", today.toISOString());
+
+  const { data: blanchimentsJour } = await supabase
+    .from("blanchiments")
+    .select("id")
+    .gte("created_at", today.toISOString());
+
+  const { data: activites } = await supabase
+    .from("historique")
+    .select("id, type, description, created_at")
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const { data: derniersAchats } = await supabase
+    .from("transactions_libres")
+    .select("id, type, description, montant, monnaie, created_at")
+    .order("created_at", { ascending: false })
+    .limit(5);
 
   const argentPropre = ((membres as Membre[]) || []).reduce(
     (total, membre) => total + Number(membre.banque || 0),
@@ -66,13 +100,24 @@ export default async function DashboardPage() {
 
   const totalMembres = ((membres as Membre[]) || []).length;
   const totalAppartements = ((appartements as Appartement[]) || []).length;
-  const totalTransactionsJour =
-    ((transactionsJour as Transaction[]) || []).length;
-    const { data: activites } = await supabase
-  .from("historique")
-  .select("*")
-  .order("created_at", { ascending: false })
-  .limit(5);
+  const totalTransactionsJour = ((transactionsJour as { id: number }[]) || [])
+    .length;
+  const totalTransactionsLibresJour =
+    ((transactionsLibresJour as { id: number; montant: number }[]) || [])
+      .length;
+  const totalBlanchimentsJour = ((blanchimentsJour as { id: number }[]) || [])
+    .length;
+
+  const montantTransactionsLibresJour = (
+    (transactionsLibresJour as { id: number; montant: number }[]) || []
+  ).reduce((total, item) => total + Number(item.montant || 0), 0);
+
+  function iconeAchat(type: string) {
+    if (type === "Véhicule") return "🚗";
+    if (type === "Appartement") return "🏠";
+    if (type === "Carte grise") return "📄";
+    return "📦";
+  }
 
   return (
     <main className="p-8">
@@ -126,59 +171,107 @@ export default async function DashboardPage() {
 
         <div className="rounded-xl bg-slate-800 p-6 border border-slate-700">
           <p className="text-slate-400">🏠 Appartements</p>
-          <p className="mt-3 text-3xl font-bold">
-            {totalAppartements}
-          </p>
-          <p className="mt-2 text-sm text-slate-500">
-            Stockages actifs
-          </p>
+          <p className="mt-3 text-3xl font-bold">{totalAppartements}</p>
+          <p className="mt-2 text-sm text-slate-500">Stockages actifs</p>
         </div>
 
         <div className="rounded-xl bg-slate-800 p-6 border border-slate-700">
-          <p className="text-slate-400">📜 Transactions aujourd'hui</p>
-          <p className="mt-3 text-3xl font-bold">
-            {totalTransactionsJour}
-          </p>
+          <p className="text-slate-400">📜 Transactions groupe aujourd'hui</p>
+          <p className="mt-3 text-3xl font-bold">{totalTransactionsJour}</p>
           <p className="mt-2 text-sm text-slate-500">
-            Transactions enregistrées depuis minuit
+            Transactions groupe depuis minuit
           </p>
         </div>
       </div>
 
-     <div className="mt-8 rounded-xl bg-slate-800 p-6 border border-slate-700">
-  <h2 className="text-2xl font-bold mb-4">
-    📜 Dernières activités
-  </h2>
-
-  {activites && activites.length > 0 ? (
-    <div className="space-y-3">
-      {activites.map((item: any) => (
-        <div
-          key={item.id}
-          className="rounded-lg bg-slate-900 p-4"
-        >
-          <div className="flex justify-between">
-            <span className="font-semibold">
-              {item.type}
-            </span>
-
-            <span className="text-sm text-slate-400">
-              {new Date(item.created_at).toLocaleString("fr-FR")}
-            </span>
-          </div>
-
-          <p className="mt-2 text-slate-300 line-clamp-2">
-            {item.description}
+      <div className="mt-6 grid xl:grid-cols-3 md:grid-cols-2 gap-6">
+        <div className="rounded-xl bg-slate-800 p-6 border border-slate-700">
+          <p className="text-slate-400">📦 Transactions libres aujourd'hui</p>
+          <p className="mt-3 text-3xl font-bold">
+            {totalTransactionsLibresJour}
+          </p>
+          <p className="mt-2 text-sm text-slate-500">
+            Total : {montantTransactionsLibresJour.toLocaleString()} $
           </p>
         </div>
-      ))}
-    </div>
-  ) : (
-    <p className="text-slate-400">
-      Aucune activité récente.
-    </p>
-  )}
-</div>
+
+        <div className="rounded-xl bg-slate-800 p-6 border border-slate-700">
+          <p className="text-slate-400">🧼 Blanchiments aujourd'hui</p>
+          <p className="mt-3 text-3xl font-bold">{totalBlanchimentsJour}</p>
+          <p className="mt-2 text-sm text-slate-500">
+            Opérations de blanchiment depuis minuit
+          </p>
+        </div>
+
+        <div className="rounded-xl bg-slate-800 p-6 border border-slate-700">
+          <p className="text-slate-400">📊 Activité du jour</p>
+          <p className="mt-3 text-3xl font-bold">
+            {totalTransactionsJour +
+              totalTransactionsLibresJour +
+              totalBlanchimentsJour}
+          </p>
+          <p className="mt-2 text-sm text-slate-500">
+            Total opérations enregistrées
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-8 grid xl:grid-cols-2 gap-6">
+        <div className="rounded-xl bg-slate-800 p-6 border border-slate-700">
+          <h2 className="text-2xl font-bold mb-4">📜 Dernières activités</h2>
+
+          {activites && activites.length > 0 ? (
+            <div className="space-y-3">
+              {(activites as Activite[]).map((item) => (
+                <div key={item.id} className="rounded-lg bg-slate-900 p-4">
+                  <div className="flex justify-between gap-4">
+                    <span className="font-semibold">{item.type}</span>
+                    <span className="text-sm text-slate-400">
+                      {new Date(item.created_at).toLocaleString("fr-FR")}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-slate-300 line-clamp-2">
+                    {item.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-slate-400">Aucune activité récente.</p>
+          )}
+        </div>
+
+        <div className="rounded-xl bg-slate-800 p-6 border border-slate-700">
+          <h2 className="text-2xl font-bold mb-4">🚗 Derniers achats libres</h2>
+
+          {derniersAchats && derniersAchats.length > 0 ? (
+            <div className="space-y-3">
+              {(derniersAchats as TransactionLibre[]).map((achat) => (
+                <div key={achat.id} className="rounded-lg bg-slate-900 p-4">
+                  <div className="flex justify-between gap-4">
+                    <span className="font-semibold">
+                      {iconeAchat(achat.type)} {achat.type}
+                    </span>
+
+                    <span className="text-sm text-slate-400">
+                      {new Date(achat.created_at).toLocaleString("fr-FR")}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-slate-300">{achat.description}</p>
+                  <p className="mt-1 font-bold">
+                    {achat.montant.toLocaleString()} ${" "}
+                    {achat.monnaie === "sale" ? "💵 Sale" : "🏦 Propre"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-slate-400">Aucun achat libre récent.</p>
+          )}
+        </div>
+      </div>
     </main>
   );
 }
