@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
 
 type Membre = {
@@ -16,6 +18,8 @@ export default function BanquesClient({
 }: {
   membres: Membre[];
 }) {
+  const router = useRouter();
+
   const [liste, setListe] = useState(membres);
   const [savingId, setSavingId] = useState<number | null>(null);
 
@@ -30,11 +34,12 @@ export default function BanquesClient({
     setSavingId(null);
 
     if (error) {
-      alert("Erreur : " + error.message);
+      toast.error(error.message);
       return;
     }
 
-    alert("Solde sauvegardé !");
+    toast.success("Solde sauvegardé !");
+    router.refresh();
   }
 
   const totalBanque = liste.reduce(
@@ -63,7 +68,8 @@ export default function BanquesClient({
               <tr key={membre.id} className="border-t border-slate-700">
                 <td className="p-4">{membre.nom}</td>
                 <td className="p-4">{membre.grade}</td>
-                <td className="p-4">{membre.compte}</td>
+                <td className="p-4">{membre.compte || "-"}</td>
+
                 <td className="p-4">
                   <input
                     type="number"
@@ -83,6 +89,7 @@ export default function BanquesClient({
                   />
                   <span className="ml-2">$</span>
                 </td>
+
                 <td className="p-4">
                   <button
                     onClick={() => updateBanque(membre.id, membre.banque)}

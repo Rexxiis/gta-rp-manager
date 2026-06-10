@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
 
 type Produit = {
@@ -32,13 +34,19 @@ function afficherMonnaie(monnaie: "propre" | "sale") {
   return monnaie === "sale" ? "💵 Sale" : "🏦 Propre";
 }
 
-export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
-  const groupesActifs = groupes.map((groupe) => ({
-    ...groupe,
-    produits: groupe.produits.filter((produit) => produit.actif !== false),
-  }));
+function nettoyerGroupes(groupes: Groupe[]) {
+  return groupes
+    .filter((groupe) => groupe.actif !== false)
+    .map((groupe) => ({
+      ...groupe,
+      produits: groupe.produits.filter((produit) => produit.actif !== false),
+    }));
+}
 
-  const [liste, setListe] = useState(groupesActifs);
+export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
+  const router = useRouter();
+
+  const [liste, setListe] = useState(nettoyerGroupes(groupes));
   const [modal, setModal] = useState(false);
   const [edition, setEdition] = useState<Groupe | null>(null);
   const [form, setForm] = useState(groupeVide);
@@ -49,6 +57,10 @@ export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
     prix: 0,
     monnaie: "propre" as "propre" | "sale",
   });
+
+  useEffect(() => {
+    setListe(nettoyerGroupes(groupes));
+  }, [groupes]);
 
   function ouvrirAjout() {
     setEdition(null);
@@ -85,7 +97,7 @@ export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
 
   async function sauvegarderGroupe() {
     if (!form.nom.trim() || !form.activite.trim()) {
-      alert("Nom et type obligatoires");
+      toast.error("Nom et type obligatoires");
       return;
     }
 
@@ -100,7 +112,7 @@ export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
         .eq("id", edition.id);
 
       if (error) {
-        alert(error.message);
+        toast.error(error.message);
         return;
       }
 
@@ -112,8 +124,12 @@ export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
       };
 
       setEdition(updated);
-      setListe(liste.map((g) => (g.id === edition.id ? updated : g)));
-      alert("Groupe sauvegardé !");
+      setListe((ancienne) =>
+        ancienne.map((groupe) => (groupe.id === edition.id ? updated : groupe))
+      );
+
+      toast.success("Groupe sauvegardé");
+      router.refresh();
     } else {
       const { data, error } = await supabase
         .from("groupes")
@@ -127,7 +143,7 @@ export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
         .single();
 
       if (error) {
-        alert(error.message);
+        toast.error(error.message);
         return;
       }
 
@@ -136,9 +152,11 @@ export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
         produits: data.produits || [],
       };
 
-      setListe([...liste, nouveauGroupe]);
+      setListe((ancienne) => [...ancienne, nouveauGroupe]);
       setEdition(nouveauGroupe);
-      alert("Groupe créé !");
+
+      toast.success("Groupe créé");
+      router.refresh();
     }
   }
 
@@ -151,21 +169,23 @@ export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
       .eq("id", id);
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
       return;
     }
 
-    setListe(liste.filter((groupe) => groupe.id !== id));
+    setListe((ancienne) => ancienne.filter((groupe) => groupe.id !== id));
+    toast.success("Groupe désactivé");
+    router.refresh();
   }
 
   async function ajouterProduit() {
     if (!edition) {
-      alert("Sauvegarde d'abord le groupe");
+      toast.error("Sauvegarde d'abord le groupe");
       return;
     }
 
     if (!produitForm.nom.trim()) {
-      alert("Nom du produit obligatoire");
+      toast.error("Nom du produit obligatoire");
       return;
     }
 
@@ -183,7 +203,7 @@ export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
       .single();
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
       return;
     }
 
@@ -193,7 +213,9 @@ export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
     };
 
     setEdition(updated);
-    setListe(liste.map((g) => (g.id === edition.id ? updated : g)));
+    setListe((ancienne) =>
+      ancienne.map((groupe) => (groupe.id === edition.id ? updated : groupe))
+    );
 
     setProduitForm({
       nom: "",
@@ -201,6 +223,9 @@ export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
       prix: 0,
       monnaie: "propre",
     });
+
+    toast.success("Produit ajouté");
+    router.refresh();
   }
 
   async function desactiverProduit(id: number) {
@@ -212,7 +237,7 @@ export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
       .eq("id", id);
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
       return;
     }
 
@@ -222,12 +247,17 @@ export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
     };
 
     setEdition(updated);
-    setListe(liste.map((g) => (g.id === edition.id ? updated : g)));
+    setListe((ancienne) =>
+      ancienne.map((groupe) => (groupe.id === edition.id ? updated : groupe))
+    );
+
+    toast.success("Produit supprimé");
+    router.refresh();
   }
 
   async function uploadLogo(file: File) {
     if (!edition) {
-      alert("Sauvegarde d'abord le groupe avant d'ajouter un logo.");
+      toast.error("Sauvegarde d'abord le groupe avant d'ajouter un logo.");
       return;
     }
 
@@ -239,7 +269,7 @@ export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
       .upload(fileName, file);
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
       return;
     }
 
@@ -252,7 +282,7 @@ export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
       .eq("id", edition.id);
 
     if (updateError) {
-      alert(updateError.message);
+      toast.error(updateError.message);
       return;
     }
 
@@ -266,7 +296,12 @@ export default function GroupesClient({ groupes }: { groupes: Groupe[] }) {
       ...form,
       logo_url: logoUrl,
     });
-    setListe(liste.map((g) => (g.id === edition.id ? updated : g)));
+    setListe((ancienne) =>
+      ancienne.map((groupe) => (groupe.id === edition.id ? updated : groupe))
+    );
+
+    toast.success("Logo importé");
+    router.refresh();
   }
 
   return (

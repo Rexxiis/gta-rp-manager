@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
 
 type StockItem = {
@@ -25,9 +27,16 @@ export default function StockagesClient({
 }: {
   appartements: Appartement[];
 }) {
+  const router = useRouter();
+
   const [liste, setListe] = useState(appartements);
   const [editing, setEditing] = useState<Appartement | null>(null);
-const [ouvert, setOuvert] = useState<number | null>(null);
+  const [ouvert, setOuvert] = useState<number | null>(null);
+
+  useEffect(() => {
+    setListe(appartements);
+  }, [appartements]);
+
   function valeurStock(appartement: Appartement) {
     return appartement.stock_items.reduce((total, item) => {
       if (!item.prix_unitaire) return total;
@@ -76,17 +85,20 @@ const [ouvert, setOuvert] = useState<number | null>(null);
       .single();
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
       return;
     }
 
-    setListe([
-      ...liste,
+    setListe((ancienne) => [
+      ...ancienne,
       {
         ...data,
         stock_items: data.stock_items || [],
       },
     ]);
+
+    toast.success("Appartement ajouté");
+    router.refresh();
   }
 
   async function sauvegarder() {
@@ -104,7 +116,7 @@ const [ouvert, setOuvert] = useState<number | null>(null);
       .eq("id", editing.id);
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
       return;
     }
 
@@ -119,7 +131,7 @@ const [ouvert, setOuvert] = useState<number | null>(null);
         .eq("id", item.id);
 
       if (itemError) {
-        alert(itemError.message);
+        toast.error(itemError.message);
         return;
       }
     }
@@ -131,6 +143,8 @@ const [ouvert, setOuvert] = useState<number | null>(null);
     );
 
     setEditing(null);
+    toast.success("Appartement sauvegardé");
+    router.refresh();
   }
 
   async function ajouterObjet() {
@@ -148,7 +162,7 @@ const [ouvert, setOuvert] = useState<number | null>(null);
       .single();
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
       return;
     }
 
@@ -156,19 +170,18 @@ const [ouvert, setOuvert] = useState<number | null>(null);
       ...editing,
       stock_items: [...editing.stock_items, data],
     });
+
+    toast.success("Objet ajouté");
   }
 
   async function supprimerObjet(id: number) {
     if (!editing) return;
     if (!confirm("Supprimer cet objet du stock ?")) return;
 
-    const { error } = await supabase
-      .from("stock_items")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("stock_items").delete().eq("id", id);
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
       return;
     }
 
@@ -176,6 +189,8 @@ const [ouvert, setOuvert] = useState<number | null>(null);
       ...editing,
       stock_items: editing.stock_items.filter((item) => item.id !== id),
     });
+
+    toast.success("Objet supprimé");
   }
 
   return (
@@ -243,56 +258,47 @@ const [ouvert, setOuvert] = useState<number | null>(null);
             </div>
 
             <div className="mb-5">
-  <button
-    onClick={() =>
-      setOuvert(
-        ouvert === appartement.id
-          ? null
-          : appartement.id
-      )
-    }
-    className="mb-3 w-full rounded bg-slate-700 p-3 text-left hover:bg-slate-600"
-  >
-    {ouvert === appartement.id
-      ? "▲ Masquer le stock"
-      : `▼ Voir le stock (${appartement.stock_items.length} objets)`}
-  </button>
+              <button
+                onClick={() =>
+                  setOuvert(ouvert === appartement.id ? null : appartement.id)
+                }
+                className="mb-3 w-full rounded bg-slate-700 p-3 text-left hover:bg-slate-600"
+              >
+                {ouvert === appartement.id
+                  ? "▲ Masquer le stock"
+                  : `▼ Voir le stock (${appartement.stock_items.length} objets)`}
+              </button>
 
-  {ouvert === appartement.id && (
-    <div className="space-y-2">
-      {appartement.stock_items.length === 0 ? (
-        <p className="text-slate-400">
-          Aucun objet.
-        </p>
-      ) : (
-        appartement.stock_items.map((item) => (
-          <div
-            key={item.id}
-            className="flex justify-between rounded bg-slate-900 p-3"
-          >
-            <span>{item.nom}</span>
+              {ouvert === appartement.id && (
+                <div className="space-y-2">
+                  {appartement.stock_items.length === 0 ? (
+                    <p className="text-slate-400">Aucun objet.</p>
+                  ) : (
+                    appartement.stock_items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex justify-between rounded bg-slate-900 p-3"
+                      >
+                        <span>{item.nom}</span>
 
-            <span>
-              x{item.quantite}
-
-              {!item.prix_unitaire && (
-                <span className="ml-2 text-yellow-400">
-                  ⚠️
-                </span>
+                        <span>
+                          x{item.quantite}
+                          {!item.prix_unitaire && (
+                            <span className="ml-2 text-yellow-400">⚠️</span>
+                          )}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
               )}
-            </span>
-          </div>
-        ))
-      )}
-    </div>
-  )}
 
-  {objetsSansPrix(appartement) > 0 && (
-    <p className="mt-2 text-sm text-yellow-400">
-      ⚠️ {objetsSansPrix(appartement)} objet(s) sans prix
-    </p>
-  )}
-</div>
+              {objetsSansPrix(appartement) > 0 && (
+                <p className="mt-2 text-sm text-yellow-400">
+                  ⚠️ {objetsSansPrix(appartement)} objet(s) sans prix
+                </p>
+              )}
+            </div>
 
             <button
               onClick={() => setEditing(appartement)}

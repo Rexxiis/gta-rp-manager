@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
 
@@ -15,6 +16,8 @@ export default function OrganisationClient({
 }: {
   organisation: Organisation;
 }) {
+  const router = useRouter();
+
   const [nom, setNom] = useState(organisation.nom);
   const [logoUrl, setLogoUrl] = useState(organisation.logo_url || "");
 
@@ -33,6 +36,7 @@ export default function OrganisationClient({
     }
 
     toast.success("Organisation sauvegardée !");
+    router.refresh();
   }
 
   async function uploadLogo(file: File) {
@@ -54,7 +58,7 @@ export default function OrganisationClient({
 
     setLogoUrl(data.publicUrl);
 
-    toast.success("Logo importé !");
+    toast.success("Logo importé ! Clique sur Sauvegarder.");
   }
 
   return (
