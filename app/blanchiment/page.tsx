@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import BlanchimentClient from "./BlanchimentClient";
 import { supabase } from "../../lib/supabase";
 
