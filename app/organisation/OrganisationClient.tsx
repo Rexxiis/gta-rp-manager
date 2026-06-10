@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
 
 type Organisation = {
@@ -27,11 +28,11 @@ export default function OrganisationClient({
       .eq("id", organisation.id);
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
       return;
     }
 
-    alert("Organisation sauvegardée !");
+    toast.success("Organisation sauvegardée !");
   }
 
   async function uploadLogo(file: File) {
@@ -43,13 +44,17 @@ export default function OrganisationClient({
       .upload(fileName, file);
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
       return;
     }
 
-    const { data } = supabase.storage.from("logos").getPublicUrl(fileName);
+    const { data } = supabase.storage
+      .from("logos")
+      .getPublicUrl(fileName);
 
     setLogoUrl(data.publicUrl);
+
+    toast.success("Logo importé !");
   }
 
   return (
@@ -71,27 +76,33 @@ export default function OrganisationClient({
           Logo de l'organisation
         </label>
 
-        {logoUrl ? (
-          <img
-            src={logoUrl}
-            alt="Logo organisation"
-            className="mb-4 h-28 w-28 rounded-xl object-cover bg-slate-900"
-          />
-        ) : (
-          <div className="mb-4 flex h-28 w-28 items-center justify-center rounded-xl bg-slate-900 text-slate-500">
-            Logo
-          </div>
-        )}
+        <div className="mb-4 flex justify-center">
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt="Logo organisation"
+              className="h-32 w-32 rounded-xl object-cover border border-slate-700 bg-slate-900"
+            />
+          ) : (
+            <div className="flex h-32 w-32 items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-slate-500">
+              Logo
+            </div>
+          )}
+        </div>
 
         <input
           type="file"
           accept="image/*"
-          className="mb-6 w-full rounded bg-slate-700 p-3"
+          className="mb-4 w-full rounded bg-slate-700 p-3"
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) uploadLogo(file);
           }}
         />
+
+        <p className="mb-6 text-sm text-slate-400">
+          Choisis un logo puis clique sur « Sauvegarder » pour l'enregistrer.
+        </p>
 
         <button
           onClick={sauvegarder}

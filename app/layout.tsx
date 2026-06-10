@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "react-hot-toast";
 import AppShell from "./components/AppShell";
 import "./globals.css";
 
@@ -26,6 +27,18 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="bg-slate-950 text-white">
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: "#1e293b",
+              color: "#fff",
+              border: "1px solid #334155",
+            },
+          }}
+        />
+
         <AppShell>{children}</AppShell>
       </body>
     </html>

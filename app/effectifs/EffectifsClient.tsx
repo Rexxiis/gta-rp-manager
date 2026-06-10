@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
 
 type Membre = {
@@ -31,6 +32,13 @@ const membreVide = {
   email: "",
 };
 
+const grades = {
+  Boss: 4,
+  "Bras droit": 3,
+  Membre: 2,
+  Recrue: 1,
+};
+
 export default function EffectifsClient({
   membres,
   appartements,
@@ -42,6 +50,40 @@ export default function EffectifsClient({
   const [modalOuverte, setModalOuverte] = useState(false);
   const [edition, setEdition] = useState<Membre | null>(null);
   const [form, setForm] = useState(membreVide);
+  const [gradeConnecte, setGradeConnecte] = useState("");
+  const [ordreGrade, setOrdreGrade] = useState<"asc" | "desc">("desc");
+
+  const peutVoirEmail =
+    gradeConnecte === "Boss" || gradeConnecte === "Bras droit";
+
+  const listeTriee = [...liste].sort((a, b) => {
+    const gradeA = grades[a.grade as keyof typeof grades] || 0;
+    const gradeB = grades[b.grade as keyof typeof grades] || 0;
+
+    return ordreGrade === "desc" ? gradeB - gradeA : gradeA - gradeB;
+  });
+
+  useEffect(() => {
+    async function chargerMembreConnecte() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user?.email) return;
+
+      const { data } = await supabase
+        .from("membres")
+        .select("grade")
+        .eq("email", user.email)
+        .single();
+
+      if (data) {
+        setGradeConnecte(data.grade);
+      }
+    }
+
+    chargerMembreConnecte();
+  }, []);
 
   const presents = liste.filter((m) => m.present).length;
   const absents = liste.length - presents;
@@ -76,7 +118,10 @@ export default function EffectifsClient({
   }
 
   async function sauvegarder() {
-    if (!form.nom.trim()) return alert("Nom obligatoire");
+    if (!form.nom.trim()) {
+      toast.error("Nom obligatoire");
+      return;
+    }
 
     if (edition) {
       const { error } = await supabase
@@ -84,9 +129,16 @@ export default function EffectifsClient({
         .update(form)
         .eq("id", edition.id);
 
-      if (error) return alert(error.message);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
 
-      setListe(liste.map((m) => (m.id === edition.id ? { ...m, ...form } : m)));
+      setListe(
+        liste.map((m) => (m.id === edition.id ? { ...m, ...form } : m))
+      );
+
+      toast.success("Membre modifié");
     } else {
       const { data, error } = await supabase
         .from("membres")
@@ -94,9 +146,13 @@ export default function EffectifsClient({
         .select()
         .single();
 
-      if (error) return alert(error.message);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
 
       setListe([...liste, data]);
+      toast.success("Membre ajouté");
     }
 
     setModalOuverte(false);
@@ -107,14 +163,47 @@ export default function EffectifsClient({
 
     const { error } = await supabase.from("membres").delete().eq("id", id);
 
-    if (error) return alert(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
 
     setListe(liste.filter((m) => m.id !== id));
+    toast.success("Membre supprimé");
   }
+  async function reinitialiserPresences() {
+  if (
+    !confirm(
+      "Réinitialiser les présences de tous les membres ?"
+    )
+  )
+    return;
+
+  const { error } = await supabase
+    .from("membres")
+    .update({ present: false })
+    .neq("id", 0);
+
+  if (error) {
+    toast.error(error.message);
+    return;
+  }
+
+  setListe((ancienne) =>
+    ancienne.map((m) => ({
+      ...m,
+      present: false,
+    }))
+  );
+
+  toast.success(
+    "Toutes les présences ont été réinitialisées"
+  );
+}
 
   return (
     <main className="p-8">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-4xl font-bold">👥 Effectifs</h1>
           <p className="mt-2 text-slate-400">
@@ -122,12 +211,21 @@ export default function EffectifsClient({
           </p>
         </div>
 
-        <button
-          onClick={ouvrirAjout}
-          className="rounded-lg bg-green-600 px-5 py-3 font-semibold hover:bg-green-500"
-        >
-          ➕ Ajouter un membre
-        </button>
+        <div className="flex flex-wrap gap-3">
+  <button
+    onClick={ouvrirAjout}
+    className="rounded-lg bg-green-600 px-5 py-3 font-semibold hover:bg-green-500"
+  >
+    ➕ Ajouter un membre
+  </button>
+
+  <button
+    onClick={reinitialiserPresences}
+    className="rounded-lg bg-orange-600 px-5 py-3 font-semibold hover:bg-orange-500"
+  >
+    🔄 Réinitialiser les présences
+  </button>
+</div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-6 mb-6">
@@ -152,8 +250,18 @@ export default function EffectifsClient({
           <thead className="bg-slate-700">
             <tr>
               <th className="p-4 text-left">Nom</th>
-              <th className="p-4 text-left">Grade</th>
-              <th className="p-4 text-left">Email</th>
+
+              <th
+                className="p-4 text-left cursor-pointer select-none hover:text-blue-400"
+                onClick={() =>
+                  setOrdreGrade(ordreGrade === "desc" ? "asc" : "desc")
+                }
+              >
+                Grade {ordreGrade === "desc" ? "⬇️" : "⬆️"}
+              </th>
+
+              {peutVoirEmail && <th className="p-4 text-left">Email</th>}
+
               <th className="p-4 text-left">Présence</th>
               <th className="p-4 text-left">Téléphone</th>
               <th className="p-4 text-left">Compte</th>
@@ -164,11 +272,14 @@ export default function EffectifsClient({
           </thead>
 
           <tbody>
-            {liste.map((membre) => (
+            {listeTriee.map((membre) => (
               <tr key={membre.id} className="border-t border-slate-700">
                 <td className="p-4 font-semibold">{membre.nom}</td>
                 <td className="p-4">{membre.grade}</td>
-                <td className="p-4">{membre.email || "-"}</td>
+
+                {peutVoirEmail && (
+                  <td className="p-4">{membre.email || "-"}</td>
+                )}
 
                 <td className="p-4">
                   <input
@@ -193,8 +304,15 @@ export default function EffectifsClient({
                         .eq("id", membre.id);
 
                       if (error) {
-                        alert(error.message);
+                        toast.error(error.message);
+                        return;
                       }
+
+                      toast.success(
+                        nouvelleValeur
+                          ? "Membre marqué présent"
+                          : "Membre marqué absent"
+                      );
                     }}
                     className="h-5 w-5 cursor-pointer"
                   />
@@ -243,12 +361,16 @@ export default function EffectifsClient({
                 onChange={(e) => setForm({ ...form, nom: e.target.value })}
               />
 
-              <input
-                className="rounded bg-slate-800 p-3"
-                placeholder="Email de connexion"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-              />
+              {peutVoirEmail && (
+                <input
+                  className="rounded bg-slate-800 p-3"
+                  placeholder="Email de connexion"
+                  value={form.email}
+                  onChange={(e) =>
+                    setForm({ ...form, email: e.target.value })
+                  }
+                />
+              )}
 
               <select
                 className="rounded bg-slate-800 p-3"
@@ -258,6 +380,7 @@ export default function EffectifsClient({
                 <option>Boss</option>
                 <option>Bras droit</option>
                 <option>Membre</option>
+                <option>Recrue</option>
               </select>
 
               <input

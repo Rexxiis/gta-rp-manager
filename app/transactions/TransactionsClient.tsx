@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
 
 type Produit = {
@@ -75,7 +76,16 @@ export default function TransactionsClient({ groupes }: { groupes: Groupe[] }) {
 
   function ajouterLigne(produitChoisi?: Produit) {
     const produitFinal = produitChoisi || produit;
-    if (!produitFinal || quantite <= 0) return;
+
+    if (!produitFinal) {
+      toast.error("Sélectionne un produit.");
+      return;
+    }
+
+    if (quantite <= 0) {
+      toast.error("Entre une quantité valide.");
+      return;
+    }
 
     setLignes((ancienne) => [
       ...ancienne,
@@ -85,12 +95,15 @@ export default function TransactionsClient({ groupes }: { groupes: Groupe[] }) {
       },
     ]);
 
+    toast.success(`${produitFinal.nom} ajouté au panier`);
+
     setProduitId(0);
     setQuantite(1);
   }
 
   function supprimerLigne(index: number) {
     setLignes((ancienne) => ancienne.filter((_, i) => i !== index));
+    toast.success("Produit retiré du panier");
   }
 
   const totalPropre = lignes
@@ -105,7 +118,7 @@ export default function TransactionsClient({ groupes }: { groupes: Groupe[] }) {
 
   async function enregistrerTransactionGroupe() {
     if (!groupe || lignes.length === 0) {
-      alert("Ajoute au moins un produit.");
+      toast.error("Ajoute au moins un produit.");
       return;
     }
 
@@ -124,7 +137,7 @@ export default function TransactionsClient({ groupes }: { groupes: Groupe[] }) {
       .single();
 
     if (error) {
-      alert("Erreur transaction : " + error.message);
+      toast.error("Erreur transaction : " + error.message);
       return;
     }
 
@@ -143,11 +156,11 @@ export default function TransactionsClient({ groupes }: { groupes: Groupe[] }) {
       .insert(lignesInsert);
 
     if (lignesError) {
-      alert("Erreur lignes : " + lignesError.message);
+      toast.error("Erreur lignes : " + lignesError.message);
       return;
     }
 
-    await supabase.from("historique").insert({
+    const { error: historiqueError } = await supabase.from("historique").insert({
       type: "Transaction",
       utilisateur,
       description:
@@ -168,14 +181,19 @@ export default function TransactionsClient({ groupes }: { groupes: Groupe[] }) {
         (note ? `\n\nNote : ${note}` : ""),
     });
 
-    alert("Transaction groupe enregistrée !");
+    if (historiqueError) {
+      toast.error("Transaction enregistrée, mais erreur historique.");
+      return;
+    }
+
+    toast.success("Transaction groupe enregistrée !");
     setLignes([]);
     setNote("");
   }
 
   async function enregistrerTransactionLibre() {
     if (!descriptionLibre.trim() || montantLibre <= 0) {
-      alert("Description et montant obligatoires.");
+      toast.error("Description et montant obligatoires.");
       return;
     }
 
@@ -190,11 +208,11 @@ export default function TransactionsClient({ groupes }: { groupes: Groupe[] }) {
     });
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
       return;
     }
 
-    await supabase.from("historique").insert({
+    const { error: historiqueError } = await supabase.from("historique").insert({
       type: "Transaction libre",
       utilisateur,
       description:
@@ -204,7 +222,12 @@ export default function TransactionsClient({ groupes }: { groupes: Groupe[] }) {
         (noteLibre ? `\n\nNote : ${noteLibre}` : ""),
     });
 
-    alert("Transaction libre enregistrée !");
+    if (historiqueError) {
+      toast.error("Transaction enregistrée, mais erreur historique.");
+      return;
+    }
+
+    toast.success("Transaction libre enregistrée !");
     setDescriptionLibre("");
     setMontantLibre(0);
     setMonnaieLibre("propre");

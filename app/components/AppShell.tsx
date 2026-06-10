@@ -14,7 +14,6 @@ const menuItems = [
   { name: "📦 Stockages", href: "/stockages" },
   { name: "🤝 Groupes", href: "/groupes" },
   { name: "💰 Transactions", href: "/transactions" },
-  { name: "📈 Patrimoine", href: "/patrimoine" },
   { name: "🧼 Blanchiment", href: "/blanchiment" },
   { name: "📜 Historique", href: "/historique" },
   { name: "⚙️ Organisation", href: "/organisation" },

@@ -1,14 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 
+type Organisation = {
+  nom: string;
+  logo_url: string | null;
+};
+
 export default function LoginForm() {
   const router = useRouter();
+
+  const [organisation, setOrganisation] =
+    useState<Organisation | null>(null);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
+
+  useEffect(() => {
+    async function chargerOrganisation() {
+      const { data } = await supabase
+        .from("organisation")
+        .select("nom, logo_url")
+        .limit(1)
+        .single();
+
+      if (data) {
+        setOrganisation(data);
+      }
+    }
+
+    chargerOrganisation();
+  }, []);
 
   async function connexion() {
     const { error } = await supabase.auth.signInWithPassword({
@@ -44,9 +69,25 @@ export default function LoginForm() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
-      <div className="w-full max-w-md rounded-xl bg-slate-900 p-8 border border-slate-700">
-        <h1 className="text-3xl font-bold mb-2">Connexion</h1>
-        <p className="text-slate-400 mb-6">GTA RP Manager</p>
+      <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-8">
+
+        {organisation?.logo_url && (
+          <div className="mb-6 flex justify-center">
+            <img
+              src={organisation.logo_url}
+              alt={organisation.nom}
+              className="h-24 w-24 rounded-full object-cover"
+            />
+          </div>
+        )}
+
+        <h1 className="mb-2 text-center text-3xl font-bold">
+          {organisation?.nom || "Connexion"}
+        </h1>
+
+        <p className="mb-6 text-center text-slate-400">
+          Gestion financière & logistique
+        </p>
 
         <input
           className="mb-4 w-full rounded bg-slate-800 p-3"

@@ -27,7 +27,7 @@ export default function StockagesClient({
 }) {
   const [liste, setListe] = useState(appartements);
   const [editing, setEditing] = useState<Appartement | null>(null);
-
+const [ouvert, setOuvert] = useState<number | null>(null);
   function valeurStock(appartement: Appartement) {
     return appartement.stock_items.reduce((total, item) => {
       if (!item.prix_unitaire) return total;
@@ -242,32 +242,57 @@ export default function StockagesClient({
               </div>
             </div>
 
-            <div className="space-y-2 mb-5">
-              {appartement.stock_items.length === 0 ? (
-                <p className="text-slate-400">Aucun objet.</p>
-              ) : (
-                appartement.stock_items.slice(0, 5).map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex justify-between rounded bg-slate-900 p-3"
-                  >
-                    <span>{item.nom}</span>
-                    <span>
-                      x{item.quantite}
-                      {!item.prix_unitaire && (
-                        <span className="ml-2 text-yellow-400">⚠️</span>
-                      )}
-                    </span>
-                  </div>
-                ))
-              )}
+            <div className="mb-5">
+  <button
+    onClick={() =>
+      setOuvert(
+        ouvert === appartement.id
+          ? null
+          : appartement.id
+      )
+    }
+    className="mb-3 w-full rounded bg-slate-700 p-3 text-left hover:bg-slate-600"
+  >
+    {ouvert === appartement.id
+      ? "▲ Masquer le stock"
+      : `▼ Voir le stock (${appartement.stock_items.length} objets)`}
+  </button>
 
-              {objetsSansPrix(appartement) > 0 && (
-                <p className="text-sm text-yellow-400">
-                  ⚠️ {objetsSansPrix(appartement)} objet(s) sans prix
-                </p>
+  {ouvert === appartement.id && (
+    <div className="space-y-2">
+      {appartement.stock_items.length === 0 ? (
+        <p className="text-slate-400">
+          Aucun objet.
+        </p>
+      ) : (
+        appartement.stock_items.map((item) => (
+          <div
+            key={item.id}
+            className="flex justify-between rounded bg-slate-900 p-3"
+          >
+            <span>{item.nom}</span>
+
+            <span>
+              x{item.quantite}
+
+              {!item.prix_unitaire && (
+                <span className="ml-2 text-yellow-400">
+                  ⚠️
+                </span>
               )}
-            </div>
+            </span>
+          </div>
+        ))
+      )}
+    </div>
+  )}
+
+  {objetsSansPrix(appartement) > 0 && (
+    <p className="mt-2 text-sm text-yellow-400">
+      ⚠️ {objetsSansPrix(appartement)} objet(s) sans prix
+    </p>
+  )}
+</div>
 
             <button
               onClick={() => setEditing(appartement)}
