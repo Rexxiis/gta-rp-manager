@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { supabase } from "../../lib/supabase";
 
@@ -46,12 +47,18 @@ export default function EffectifsClient({
   membres: Membre[];
   appartements: Appartement[];
 }) {
+  const router = useRouter();
+
   const [liste, setListe] = useState(membres);
   const [modalOuverte, setModalOuverte] = useState(false);
   const [edition, setEdition] = useState<Membre | null>(null);
   const [form, setForm] = useState(membreVide);
   const [gradeConnecte, setGradeConnecte] = useState("");
   const [ordreGrade, setOrdreGrade] = useState<"asc" | "desc">("desc");
+
+  useEffect(() => {
+    setListe(membres);
+  }, [membres]);
 
   const peutVoirEmail =
     gradeConnecte === "Boss" || gradeConnecte === "Bras droit";
@@ -134,11 +141,12 @@ export default function EffectifsClient({
         return;
       }
 
-      setListe(
-        liste.map((m) => (m.id === edition.id ? { ...m, ...form } : m))
+      setListe((ancienne) =>
+        ancienne.map((m) => (m.id === edition.id ? { ...m, ...form } : m))
       );
 
       toast.success("Membre modifié");
+      router.refresh();
     } else {
       const { data, error } = await supabase
         .from("membres")
@@ -151,8 +159,9 @@ export default function EffectifsClient({
         return;
       }
 
-      setListe([...liste, data]);
+      setListe((ancienne) => [...ancienne, data]);
       toast.success("Membre ajouté");
+      router.refresh();
     }
 
     setModalOuverte(false);
@@ -168,38 +177,34 @@ export default function EffectifsClient({
       return;
     }
 
-    setListe(liste.filter((m) => m.id !== id));
+    setListe((ancienne) => ancienne.filter((m) => m.id !== id));
     toast.success("Membre supprimé");
+    router.refresh();
   }
+
   async function reinitialiserPresences() {
-  if (
-    !confirm(
-      "Réinitialiser les présences de tous les membres ?"
-    )
-  )
-    return;
+    if (!confirm("Réinitialiser les présences de tous les membres ?")) return;
 
-  const { error } = await supabase
-    .from("membres")
-    .update({ present: false })
-    .neq("id", 0);
+    const { error } = await supabase
+      .from("membres")
+      .update({ present: false })
+      .neq("id", 0);
 
-  if (error) {
-    toast.error(error.message);
-    return;
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    setListe((ancienne) =>
+      ancienne.map((m) => ({
+        ...m,
+        present: false,
+      }))
+    );
+
+    toast.success("Toutes les présences ont été réinitialisées");
+    router.refresh();
   }
-
-  setListe((ancienne) =>
-    ancienne.map((m) => ({
-      ...m,
-      present: false,
-    }))
-  );
-
-  toast.success(
-    "Toutes les présences ont été réinitialisées"
-  );
-}
 
   return (
     <main className="p-8">
@@ -212,20 +217,20 @@ export default function EffectifsClient({
         </div>
 
         <div className="flex flex-wrap gap-3">
-  <button
-    onClick={ouvrirAjout}
-    className="rounded-lg bg-green-600 px-5 py-3 font-semibold hover:bg-green-500"
-  >
-    ➕ Ajouter un membre
-  </button>
+          <button
+            onClick={ouvrirAjout}
+            className="rounded-lg bg-green-600 px-5 py-3 font-semibold hover:bg-green-500"
+          >
+            ➕ Ajouter un membre
+          </button>
 
-  <button
-    onClick={reinitialiserPresences}
-    className="rounded-lg bg-orange-600 px-5 py-3 font-semibold hover:bg-orange-500"
-  >
-    🔄 Réinitialiser les présences
-  </button>
-</div>
+          <button
+            onClick={reinitialiserPresences}
+            className="rounded-lg bg-orange-600 px-5 py-3 font-semibold hover:bg-orange-500"
+          >
+            🔄 Réinitialiser les présences
+          </button>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-6 mb-6">
@@ -313,6 +318,8 @@ export default function EffectifsClient({
                           ? "Membre marqué présent"
                           : "Membre marqué absent"
                       );
+
+                      router.refresh();
                     }}
                     className="h-5 w-5 cursor-pointer"
                   />
